@@ -1,0 +1,53 @@
+.author {
+  position: fixed;
+  width: 250px;
+  box-shadow: 1px 0px 4px #b3aaaa;
+  z-index: 2;
+  
+  top: 200px;
+  left: -280px;
+  opacity: 0;
+
+  transition: top 1s, left 1s, opacity 2s;
+
+  .info {
+    text-align: center;
+    padding: 24px 10px;
+    background-color: #b9b9b9;
+    cursor: pointer;
+    .avatar {
+      padding-bottom: 8px;
+    }
+  }
+  .list {
+    text-align: center;
+    padding: 10px 10px 20px;
+    background-color: #e3e3e3;
+
+    > ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      > li {
+        padding: 8px;
+        text-align: left;
+        margin: 0 .8em;
+        .title { 
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+  }
+}
+
+.animation {
+  top: 70px;
+  left: 20px;
+  opacity: 1;
+}
+
+.move {
+  top: calc(100% - 180px);
+}

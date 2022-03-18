@@ -1,0 +1,80 @@
+.base-editor {
+    width: 100%;
+    height: 100%;
+
+    .node-dialog {
+        position: fixed;
+        top: 200px;
+        width: 250px;
+        opacity: 0;
+        box-shadow: 1px 0px 4px #b3aaaa;
+        transition: top 1s, right 1s, left 1s, opacity 2s;
+
+        background-color: #e3e3e3;
+        padding: 10px;
+        .title {
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .desc {
+            text-indent: 1em;
+            color: grey;
+            max-height: 200px;
+            overflow: auto;
+        }
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .color {
+            width: 36px;
+            height: 14px;
+            border-radius: 2px;
+        }
+        .swatch {
+            padding: 5px;
+            background: #fff;
+            border-radius: 1px;
+            box-shadow: 0 0 0 1px rgba(0,0,0,.1);
+            display: inline-block;
+            cursor: pointer;
+        }
+        .popover {
+            position: absolute;
+            right: 0;
+            z-index: 2;
+        }
+        .cover {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            bottom: 0px;
+            left: 0px;
+        }
+    }
+    .node-dialog.right {
+        width: 160px;
+        right: -170px;
+        .ant-form-item {
+            margin-bottom: 8px;
+        }
+    }
+    .node-dialog.right.visible {
+        right: 20px;
+        top: 70px;
+        opacity: 1;
+    }
+    .node-dialog.left {
+        left: -250px;
+    }
+    .node-dialog.left.visible {
+        left: 20px;
+        top: 70px;
+        opacity: 1;
+    }
+}

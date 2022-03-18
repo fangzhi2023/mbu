@@ -15,3 +15,46 @@ body {
   height: 100%;
   margin: 0;
 }
+
+@media screen and (max-width: 640px) {
+  #root {
+    .mbu-sm-hide {
+      display: none;
+    }
+
+    // TODO
+    .author-margin {
+      padding-left: 0;
+    }
+    .suite {
+      .g6-minimap {
+        display: none;
+      }
+      .g6-component-toolbar {
+        right: 20px;
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 480px) {
+  #root {
+    .mbu-xs-hide {
+      display: none;
+    }
+    // TODO
+    .suite {
+      .g6-component-toolbar {
+        display: none
+      }
+    }
+  }
+}
+
+@media screen and (max-width: 375px) {
+  #root {
+    .mbu-ss-hide {
+      display: none;
+    }
+  }
+}

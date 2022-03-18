@@ -5,6 +5,7 @@
     overflow: auto;
     .container {
         padding: 10px;
+        padding-left: 30px;
         border-radius: 6px;
         border: 1px dashed #eeeeee;
         > div > div {
@@ -12,7 +13,6 @@
         }
     }
     .edit {
-        padding-left: 30px;
         border-color: #b6b6b6;
     }
 }

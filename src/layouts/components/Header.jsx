@@ -1,16 +1,14 @@
 import "./Header.scss"
 
 import Logo from "./Logo";
-import Profile from "./Profile";
 
 function Header(props) {
     return (
-        <div className="header">
+        <div className="mbu-header">
             <Logo />
-            <div className="center">
+            <div className="content">
                 {props.children}
             </div>
-            <Profile />
         </div>
     )
 }

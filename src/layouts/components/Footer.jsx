@@ -4,7 +4,7 @@ import appConfig from "../../configs/app"
 
 function Footer() {
     return (
-        <footer className="footer">
+        <footer className="mbu-footer">
             <label>{appConfig.name}</label>
             <small className="slogan">{appConfig.slogan}</small>
             <small>@ 2022</small>

@@ -1,9 +1,9 @@
-import { formatResponse, mockToken } from "../mock/shared"
+import { mockToken } from "../mock/shared"
 
 export async function login() {    
     return new Promise(resolve => {
         setTimeout(
-            () => resolve(formatResponse(mockToken())),
+            () => resolve(mockToken()),
         2000)
     })
 }

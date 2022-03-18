@@ -1,3 +1,4 @@
+import { Ro } from "react-router"
 import { Routes, Route, Navigate } from "react-router-dom"
 
 import Layout from './layouts/components/Layout';
@@ -5,8 +6,8 @@ import Layout from './layouts/components/Layout';
 import BlankLayout from "./layouts/BlankLayout";
 import BaseLayout from "./layouts/BaseLayout";
 
-import Document from './views/document';
-import Diagram from './views/diagram';
+import Article from './views/article';
+import Suite from './views/suite';
 
 import Login from './views/shared/login';
 import Page401 from './views/shared/401';
@@ -17,21 +18,33 @@ function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<BaseLayout />}>
-          <Route path="" element={<Diagram />}></Route>
-          <Route path="diagram/:id" element={<Diagram />}></Route>
-          <Route path="diagram/:id/edit" element={<Diagram status={'editing'} />}></Route>
-          <Route path="document/:id" element={<Document />}></Route>
-          <Route path="document/:id/edit" element={<Document status={'editing'} />}></Route>
+          <Route index element={<Suite />} />
+          <Route path="suite" element={<Suite />} />
+          <Route path="suite/:id" element={<Suite />} />
+          <Route path="suite/:id/edit" element={<Suite status={'editing'} />} />
+          <Route path="article" element={<Article />} />
+          <Route path="article/:id" element={<Article />} />
+          <Route path="article/:id/edit" element={<Article status={'editing'} />} />
         </Route>
         <Route path="/shared" element={<BlankLayout />}>
-          <Route path="login" element={<Login />}></Route>
+          <Route index element={<Page404 />} />
+          <Route path="login" element={<Login />} />
           <Route path="401" element={<Page401 />} />
           <Route path="404" element={<Page404 />} />
-          <Route path="*" element={<Page404 />} />
         </Route>
-        <Route path="/*" element={<Navigate to="/shared/404" replace={true} />} />
+        <Route path="*" element={<Navigate to="/shared/404" replace={true} />} />
       </Routes>
     </Layout>
+  );
+}
+
+export function RequireAuth({ children }) {
+  const authed = true
+
+  return authed === true ? (
+    children
+  ) : (
+    <Navigate to="/shared/401" replace />
   );
 }
 

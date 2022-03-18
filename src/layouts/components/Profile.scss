@@ -1,10 +1,10 @@
 .profile {
-    width: 104px;
     margin: 0 8px;
-    flex: 0 0 120px;
     display: inline-flex;
+    align-items: center;
+    cursor: pointer;
     .name {
-        width: 86px;
+        max-width: 86px;
         display: block;
         overflow: hidden;
         text-overflow: ellipsis;
