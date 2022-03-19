@@ -1,20 +1,22 @@
-import Mock from "mockjs"
-import markdown from "./data/markdown"
+import markdownMap from "./data/markdown"
 
-const model = {
-    "id|+1": 1,
-    "parentId|+1": 1,
-    "authorId": 1,
-    "title": "@ctitle(25)",
-    "description": "@csentence(120)",
+export const mockArticleInfo = id => { 
+    if (markdownMap[id]) {
+        return { ...markdownMap[id], data: null }
+    }
+    return { ...markdownMap[100], data: null }
 }
 
-export const mockArticleInfo = id => {
-    const data = Mock.mock(model)
-    if (id) data.id = id
-    return data
+export const mockArticle = (id) => { 
+    if (markdownMap[id]) {
+        return markdownMap[id]
+    }
+    return markdownMap[100]
 }
 
-export const mockArticle = () => {
-    return markdown
+export const mockArticlesInfoBySuiteId = suiteId => { 
+    const list = Object.values(markdownMap)
+    return list.filter(item => item.suiteId === suiteId).map(item => {
+        return { ...item, data: null }
+    })
 }

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react"
 import { Avatar, Spin } from "antd"
-import { fetchAuthor } from "../../services/admin"
+import { fetchAuthor } from "../../services/shared"
 import "./Author.scss"
 import { NavLink } from "react-router-dom"
 import eventBus from "../../utils/event-bus"
@@ -11,9 +11,12 @@ function Author(props) {
 
     const [move, setMove] = useState(false)
     useEffect(() => {
-        eventBus.subscribe("moveAuthorDialog", () => {
+        const sub = eventBus.subscribe("moveAuthorDialog", () => {
             setMove(true)
         })
+        return () => {
+            sub.unsubscribe()
+        }
     }, [])
     const handleMove = () => {
         setMove(false)

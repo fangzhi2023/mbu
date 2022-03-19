@@ -7,9 +7,15 @@ import { dynamicLoad } from "../../editors"
 import "./index.scss"
 
 import { fetchSuite } from '../../services/suite';
+import { getDefaultId } from '../../layouts/BaseLayout';
 
-function Suite(props) {  
-    const { id } = useParams()
+function Suite(props) { 
+    
+    let { id } = useParams()
+    if (!id) id = getDefaultId("suite")
+
+    const { editing = false } = props
+
     const { state } = useLocation()
     let [uKey, setUKey] = useState(null)
     if (state && state.uKey != uKey) {
@@ -25,10 +31,10 @@ function Suite(props) {
         setLoading(true)
         async function fetchSuiteData() {
             const data = await fetchSuite(id)
-            const component = await dynamicLoad(data.editor)
+            const component = await dynamicLoad(data.type)
             setEditor({
                 ... data,
-                name: data.editor,
+                name: data.type,
                 component: component.default
             })
             setLoading(false)
@@ -38,7 +44,7 @@ function Suite(props) {
 
     return (
         <div className="suite">
-            { loading ? <Spin tip="加载数据..." /> : <editor.component name={editor.name} id={editor.id} data={editor.data} status={props.status} />}
+            { loading ? <Spin tip="加载数据..." /> : <editor.component name={editor.name} id={editor.id} data={editor.data} editing={editing} />}
         </div>
     )
 }

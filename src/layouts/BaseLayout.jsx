@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Fragment } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router"
-import { Button, Divider, Modal, Popover, Spin } from "antd"
-import { ReloadOutlined, EditOutlined, ShareAltOutlined, SaveOutlined, CloseOutlined, LoadingOutlined, ArrowLeftOutlined, RollbackOutlined, NodeCollapseOutlined, InfoCircleOutlined, LoginOutlined } from "@ant-design/icons"
+import { Button, Divider, message, Popover, Spin } from "antd"
+import { ReloadOutlined, EditOutlined, ShareAltOutlined, SaveOutlined, CloseOutlined, LoadingOutlined, NodeCollapseOutlined, InfoCircleOutlined, LoginOutlined } from "@ant-design/icons"
 
 import "./BaseLayout.scss"
 
@@ -12,24 +12,45 @@ import Profile from "./components/Profile";
 import { fetchSuiteInfo } from "../services/suite"
 import { fetchArticleInfo } from "../services/article"
 import { fetchAdmin } from "../services/admin"
-import { getUserInfo, setUserInfo } from "../store"
+import { getSetting, getUserInfo, setUserInfo, setSetting, isLogin } from "../store"
 import Author from "./components/Author"
 import eventBus from "../utils/event-bus"
+import { fetchSetting } from "../services/shared"
+
+// 获取默认suiteId/articleId
+export const getDefaultId = type => {
+    let data = {}
+    if (isLogin()) {
+        data = getUserInfo()
+    } else {
+        data = getSetting()
+    }
+    return type === "article" ? data.articleId : data.suiteId
+}
 
 function BaseLayout() {
+    const navigate = useNavigate()
+
     // 获取用户信息
     const [loading, setLoading] = useState(true)
     useEffect(() => {
-        async function fetchAdminInfo() {
+        async function fetchSystemInfo() {
             try {
-                const data = await fetchAdmin()
-                setUserInfo(data)
-                setLoading(false)
+                const setting = await fetchSetting()
+                setSetting(setting)
+                try {
+                    const admin = await fetchAdmin()
+                    setUserInfo(admin)
+                    setLoading(false)
+                } catch (err) {
+                    setLoading(false)
+                }
             } catch (err) {
-                setLoading(false)
+                console.err(err)
+                navigate("/shared/505")
             }
         }
-        fetchAdminInfo()
+        fetchSystemInfo()
     }, [])
 
     return (
@@ -47,16 +68,18 @@ function ContentLayout() {
     const handleLogin = () => {
         navigate("/shared/login")
     }
-
-    // 获取URL参数
+    
+    // TODO：设计上存在问题，待改进
+    let type = 'suite', editing = false, id
     const { pathname } = useLocation()
     const regExp = pathname.match(/^\/(suite|article)\/?([0-9]+)?(\/edit)?/)
-    let type = 'suite', id, isEditing
     if (regExp) {
         type = regExp[1]
+        editing = !!regExp[3]
         id = regExp[2]
-        isEditing = !!regExp[3]
     }
+    if (!id) id = getDefaultId("suite")
+
     const [loading, setLoading] = useState(true)
     const [info,setInfo] = useState({})
 
@@ -67,9 +90,9 @@ function ContentLayout() {
         async function fetchInfo() {
             let request = type === "suite" ? fetchSuiteInfo(id) : fetchArticleInfo(id)
             const data = await request
-            
+
             editable = adminInfo && adminInfo.id === data.authorId
-            if (!editable && isEditing) {
+            if (!editable && editing) {
                 navigate("/shared/401")
                 return;
             }
@@ -92,7 +115,7 @@ function ContentLayout() {
                 <div className="right">
                     { loading
                         ? "" 
-                        : <HeaderAction type={type} info={info} editable={editable} isEditing={isEditing} />
+                        : <HeaderAction type={type} info={info} editable={editable} editing={editing} />
                     }
                     { adminInfo && adminInfo.id 
                             ? <Profile info={adminInfo} />
@@ -114,77 +137,80 @@ function HeaderTitle(props) {
 
     const navigate = useNavigate()
     const handleReturn = () => {
-        navigate( `/suite/${info.parentId}`)
+        navigate( `/suite/${info.parentId || info.suiteId}`)
     }
 
     return (
         <div>
-            { info.parentId 
+            { info.parentId || info.suiteId
             ? <Fragment>
-                <Button onClick={handleReturn} type="link" size="small" title="返回上级目录" icon={<NodeCollapseOutlined />}></Button> 
+                <Button onClick={handleReturn} type="link" size="small" title="返回上级模块" icon={<NodeCollapseOutlined />}></Button> 
                 <Divider type="vertical" />
             </Fragment>
             : "" }
             <h3>{ info.title }</h3> 
-            <Popover 
+            { editable || info.description ? <Popover 
                 placement="bottomLeft" 
                 mouseEnterDelay={0.5} 
                 title={info.title} 
                 arrowPointAtCenter 
                 overlayStyle={{width: "400px"}}
                 content={<div style={{textIndent: "1em"}}>
-                    {info.description}
-                    { editable ? <Button type="link" size="small" icon={<EditOutlined />} /> : null }
+                    {info.description || '[暂无描述]'}
+                    { editable ? <Button type="link" size="small" className="icon" icon={<EditOutlined />} /> : null }
                 </div>}>
                 <Button type="link" size="small" style={{color: "grey"}} icon={<InfoCircleOutlined />}></Button>
-            </Popover>
+            </Popover> : null }
             </div>
     )
 
 }
 
 function HeaderAction(props) {
-    
-    const [modal, contextHolder] = Modal.useModal()
 
-    const { type, info, editable, isEditing } = props
+    const { type, info, editable, editing } = props
 
     const navigate = useNavigate()
 
     const handleReload = () => {
-        let path = `/${type}/${info.id}`
-        if (isEditing) {
-            path += "/edit"
+        if (editing) {
+            eventBus.publish("checkChanged", null, () => {
+                let path = `/${type}/${info.id}/edit`
+                navigate(path, { replace: true, state: { uKey: Date.now() } })
+            })
+        } else {
+            let path = `/${type}/${info.id}`
+            navigate(path, { replace: true, state: { uKey: Date.now() } })
         }
-        navigate(path, { replace: true, state: { uKey: Date.now() } })
     }
     const handleEdit = () => {
         navigate( `/${type}/${info.id}/edit`, { replace: true })
     }
     const handleCancelEdit = () => {
-        eventBus.publish("cancelEdit")
+        eventBus.publish("checkChanged", null, () => {
+            let path = `/${type}/${info.id}`
+            navigate(path, { replace: true, state: { uKey: Date.now() } })
+        })
     }
     const handleSave = () => {
-        const key = "key" + Date.now()
-        eventBus.subscribe("saveSuccess", key2 => {
-            if (key2 !== key) return
+        eventBus.publish("save", null, () => {
+            message.success("保存成功")
         })
-        eventBus.publish("save", key)
     }
 
     return (
         <div className="action mbu-xs-hide">
             <ReloadOutlined onClick={handleReload} className="icon" />
             { editable 
-                ? isEditing 
+                ? editing 
                 ? <Fragment>
                     <CloseOutlined onClick={handleCancelEdit} className="icon" />
                     <SaveOutlined onClick={handleSave} className="icon" />
-                 </Fragment>
+                </Fragment>
                 : <Fragment>
                     <EditOutlined onClick={handleEdit} className="icon mbu-sm-hide" />
                     <ShareAltOutlined className="icon" />
-                 </Fragment>
+                </Fragment>
                 : ""
             }
             <Divider type="vertical" />

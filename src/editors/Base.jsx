@@ -1,5 +1,5 @@
-import { Button, Input, Form, message, Modal } from "antd"
-import { DeleteOutlined, NodeExpandOutlined, NodeIndexOutlined, SaveOutlined } from "@ant-design/icons"
+import { Button, Input, Form, Modal, message } from "antd"
+import {  ExclamationCircleOutlined, NodeExpandOutlined, NodeIndexOutlined, SaveOutlined } from "@ant-design/icons"
 import React, { Fragment, useEffect, useState } from "react"
 import { SketchPicker } from 'react-color'
 import { debounce } from "lodash"
@@ -8,70 +8,145 @@ import eventBus from "../utils/event-bus"
 import "./Base.scss"
 import { useNavigate } from "react-router"
 import { rgba2Hex } from "../utils/color"
-import { createArticle } from "../services/article"
-import { createSuite } from "../services/suite"
+import ArticleModal from "../components/ArticleModal"
+import SuiteModal from "../components/SuiteModal"
+import { fetchSuitesInfoByParentId, updateSuiteData } from "../services/suite"
+import { fetchArticlesInfoBySuiteId } from "../services/article"
 
 function BaseEditor(props) {
 
-    const { id, status } = props
-    const navigate = useNavigate()
+    const { id, editing, hasChanged, getData } = props
+    
+    // 获取关联文章和模块
+    let [articleMap, setArticleMap] = useState({})
+    let [suiteMap, setSuiteMap] = useState({})
+    useEffect(() => {
+        async function fetchMapData() {
+            await Promise.all([
+                fetchSuitesInfoByParentId(id), 
+                fetchArticlesInfoBySuiteId(id)
+            ]).then(([suiteList, articleList]) => {
+                console.log(articleList)
+                const articleMap = {}
+                articleList.forEach(a => {
+                    articleMap[a.nodeId] = a
+                })
+                setArticleMap(articleMap)
+                const suiteMap = {}
+                suiteList.forEach(s => {
+                    suiteMap[s.nodeId] = s
+                })
+                setSuiteMap(suiteMap)
+            }).catch(err => {
+                console.error(err)
+            })
+        }
+        fetchMapData()
+    }, [id])
 
     useEffect(() => {
-        eventBus.subscribe("save", secret => {
-           message.success("保存成功")
-           eventBus.publish("saveSuccess", secret)
+        const checkChangedSub = eventBus.subscribe("checkChanged", (params, cb) => {
+           if(hasChanged()) {
+                Modal.confirm({
+                    title: '存在未保存内容',
+                    icon: <ExclamationCircleOutlined />,
+                    content: '如想中断当前操作，请点击右上角关闭图标',
+                    closable: true,
+                    okText: '保存后执行',
+                    onOk: async () => {
+                        try {
+                            await updateSuiteData({ id, data: getData() })
+                            cb && cb()
+                        } catch (err) {
+                            message.error("保存异常")
+                        }
+                    },
+                    cancelButtonProps: { danger: true },
+                    cancelText: '放弃保存',
+                    onCancel: e => {
+                        // 点击右上角关闭图标，则只是中断操作
+                        if (e && e.triggerCancel) return
+                        
+                        // e == close
+                        e()
+                        cb && cb()
+                    }
+                });
+                return
+           }
+           cb && cb()
         })
-        eventBus.subscribe("cancelEdit", () => {
-            // TODO: 
-            navigate( `/suite/${id}`, { replace: true, state: { uKey: Date.now() } })
+        const saveSub = eventBus.subscribe("save", async (params, cb) => {
+            if (hasChanged()) {
+                try {
+                    await updateSuiteData({ id, data: getData() })
+                    cb && cb()
+                } catch (err) {
+                    message.error("保存异常")
+                }
+                cb && cb()
+                return
+            } else {
+                cb && cb()
+            }
         })
-    }, [])
+        return ()  => {
+            checkChangedSub.unsubscribe()
+            saveSub.unsubscribe()
+        }
+    }, [hasChanged, getData])
 
     return <div className="base-editor">
       {props.children}
       {
-          status !== "editing"
+          !editing
             ? <Fragment>
-                <ViewNodeInfo />
+                <ViewNodeInfo id={id} articleMap={articleMap} suiteMap={suiteMap} />
                 {/* <ViewNodeFilter id={id} /> */}
             </Fragment>
-            : ""
+            : null
       }
       {
-          status === "editing"
+          editing
             ?  <Fragment>
-                <EditNodeInfo />
-                <EditNodeConfig />
+                <EditNodeInfo id={id}  articleMap={articleMap} suiteMap={suiteMap} />
+                <EditNodeConfig id={id} />
             </Fragment>
-            : ""
+            : null
       }
   </div>
 }
 
-function ViewNodeInfo() {
+function ViewNodeInfo(props) {
     
-    let nodeId = null
+    const { articleMap, suiteMap } = props 
+
+    let [nodeId, setNodeId] = useState(null)
     let [visible, setVisible] = useState(false)
     let [info, setInfo] = useState({})
 
     useEffect(() => {
-        eventBus.subscribe("showNodeDialog", ({ id, info }) => {
-            nodeId = id
+        const showDialogSub = eventBus.subscribe("showNodeDialog", ({ id, info }) => {
+            setNodeId(id)
             setInfo(info)
             setVisible(true)
             eventBus.publish("moveAuthorDialog")
         })
-        eventBus.subscribe("hideNodeDialog", () => {
+        const hideDialogSub = eventBus.subscribe("hideNodeDialog", () => {
             setVisible(false)
         })
+        return ()  => {
+            showDialogSub.unsubscribe()
+            hideDialogSub.unsubscribe()
+        }
     }, [])
     
     const navigate = useNavigate()
-    const handleViewArticle = () => {
-        navigate(`/article/${info.articleId}`)
+    const handleViewArticle = articleId => {
+        navigate(`/article/${articleId}`)
     }
-    const handleViewSuite = () => {
-        navigate(`/suite/${info.suiteId}`)
+    const handleViewSuite = suiteId => {
+        navigate(`/suite/${suiteId}`)
     }
 
     return (
@@ -79,73 +154,71 @@ function ViewNodeInfo() {
             <h3 className="title">{info.name}</h3>
             <p className="desc">{info.description}</p>
             <div className="footer">
-                <div>{ info.articleId ? <Button onClick={handleViewArticle} type="link" icon={<NodeIndexOutlined />} /> : "" }</div>
-                <div>{ info.suiteId ? <Button onClick={handleViewSuite} type="link" icon={<NodeExpandOutlined />} /> : "" }</div>
+                <div>{ articleMap[nodeId] ? <Button onClick={() => handleViewArticle(articleMap[nodeId].id)} type="link" title="查看详情" icon={<NodeIndexOutlined />}>详情</Button> : "" }</div>
+                <div>{ suiteMap[nodeId] ? <Button onClick={() => handleViewSuite(suiteMap[nodeId].id)} type="link" title="查看关联模块" icon={<NodeExpandOutlined />}>子模块</Button> : "" }</div>
             </div>
         </div>
     )
 }
 
-function EditNodeInfo() {
+function EditNodeInfo(props) {
     
-  const [form] = Form.useForm();
+    const { id, articleMap, suiteMap } = props 
+  
+    const [form] = Form.useForm();
 
     let [nodeId, setNodeId] = useState(null)
     let [info, setInfo] = useState({})
     let [visible, setVisible] = useState(false)
 
     useEffect(() => {
-        eventBus.subscribe("showNodeDialog", ({ id, info }) => {
+        const showDialogSub = eventBus.subscribe("showNodeDialog", ({ id, info }) => {
             setNodeId(id)
             setInfo(info)
             form.setFieldsValue(info)
             setVisible(true)
         })
-        eventBus.subscribe("hideNodeDialog", () => {
+        const hideDialogSub = eventBus.subscribe("hideNodeDialog", () => {
             setVisible(false)
         })
+        
+        return ()  => {
+            showDialogSub.unsubscribe()
+            hideDialogSub.unsubscribe()
+        }
     }, [])
 
     const onFinish = info => {
         eventBus.publish("updateNodeInfo", { id: nodeId, info })
-        message.success("更新成功")
     }
       
-    let [articleLoading, setArticleLoading] = useState(false)
-    let [suitLoading, setSuiteLoading] = useState(false)
     const navigate = useNavigate()
+    let [articleModalShow, setArticleModalShow] = useState(false)
+
+    const linkToArticle = articleId => {
+        navigate( `/article/${articleId}/edit`, { state: { uKey: Date.now() } })
+    }
     const handleEditArticle = () => {
-        if (info.articleId) {
-            navigate( `/article/${info.articleId}`, { state: { uKey: Date.now() } })
-            return
-        }
-        setArticleLoading(true)
-        createArticle().then(({ id }) => {
-            eventBus.publish("updateNodeInfo", { id: nodeId, info: { ...info, articleId: id }})
-            const secret = "key" + Date.now()
-            eventBus.subscribe("saveSuccess", secret2 => {
-                if (secret2 !== secret) return
-                setArticleLoading(false)
-                navigate( `/article/${id}`, { state: { uKey: Date.now() } })
-            })
-            eventBus.publish("save", secret)
+        eventBus.publish("checkChanged", null, () => {
+            if (articleMap[nodeId]) {
+                linkToArticle(articleMap[nodeId].id)
+                return
+            }
+            setArticleModalShow(true)
         })
     }
-    const handleEditSuite = () => {
-        if (info.suiteId) {
-            navigate( `/suite/${info.suiteId}`, { state: { uKey: Date.now() } })
-            return
-        }
-        setSuiteLoading(true)
-        createSuite().then(({ id }) => {
-            eventBus.publish("updateNodeInfo", { id: nodeId, info: { ...info, suiteId: id }})
-            const secret = "key" + Date.now()
-            eventBus.subscribe("saveSuccess", secret2 => {
-                if (secret2 !== secret) return
-                setSuiteLoading(false)
-                navigate( `/suite/${id}`, { state: { uKey: Date.now() } })
-            })
-            eventBus.publish("save", secret)
+
+    let [suiteModalShow, setSuiteModalShow] = useState(false)
+    const linkToSuite = suiteId => {
+        navigate( `/suite/${suiteId}/edit`, { state: { uKey: Date.now() } })
+    }
+    const handleEditSuite = () => {  
+        eventBus.publish("checkChanged", null, () => {
+            if (suiteMap[nodeId]) {
+                linkToSuite(suiteMap[nodeId].id)
+                return
+            }
+            setSuiteModalShow(true)
         })
     }
 
@@ -171,14 +244,16 @@ function EditNodeInfo() {
             </Form.Item>
             <div className="footer">
                 <div>
-                    <Button loading={articleLoading} onClick={handleEditArticle} type="link" icon={<NodeIndexOutlined />} />
-                    <Button loading={suitLoading} onClick={handleEditSuite} type="link" icon={<NodeExpandOutlined />} />
+                    <Button size="small" onClick={handleEditArticle} type="link" title="编辑详情" ><NodeIndexOutlined />详情</Button>
+                    <Button size="small" onClick={handleEditSuite} type="link" title="编辑关联模块" ><NodeExpandOutlined />模块</Button>
                 </div>
                 <div>
-                    <Button htmlType="submit" type="link" icon={<SaveOutlined />}>更新</Button>
+                    <Button size="small" htmlType="submit" type="primary" icon={<SaveOutlined />}>更新</Button>
                 </div>
             </div>
         </Form>
+        { articleModalShow ? <ArticleModal suiteId={id} nodeId={nodeId} visible={true} onOk={id => linkToArticle(id)} onCancel={() => setArticleModalShow(false)} /> : null }
+        { suiteModalShow ? <SuiteModal parentId={id} nodeId={nodeId} visible={true} onOk={id => linkToSuite(id)} onCancel={() => setSuiteModalShow(false)} /> : null }
     </div>
 }
 
@@ -210,16 +285,21 @@ function EditNodeConfig() {
     let [visible, setVisible] = useState(false)
 
     useEffect(() => {
-        eventBus.subscribe("showNodeDialog", ({ id, config }) => {
+        const showDialogSub = eventBus.subscribe("showNodeDialog", ({ id, config }) => {
             setNodeId(id)
             if(!config.color) config.color = "#fff"
             if(!config.backgroundColor) config.backgroundColor = "#000"
             setConfig(config)
             setVisible(true)
         })
-        eventBus.subscribe("hideNodeDialog", () => {
+        const hideDialogSub = eventBus.subscribe("hideNodeDialog", () => {
             setVisible(false)
         })
+        
+        return ()  => {
+            showDialogSub.unsubscribe()
+            hideDialogSub.unsubscribe()
+        }
     }, [])
 
     const publish = debounce(function(...args) {
@@ -257,12 +337,12 @@ function EditNodeConfig() {
                     <SketchPicker color={ config.backgroundColor } onChange={ e => handlePickerChange('backgroundColor', e) } />
                 </div> : null }
             </Form.Item>
-            <Form.Item label="直径">
+            { config.size != undefined ? <Form.Item label="直径">
                 <Input type="number" value={config.size} min={30} max={160} onChange={e => handleChange("size", e.target.value)} />
-            </Form.Item>
-            <Form.Item label="优先级">
+            </Form.Item> : null }
+            { config.value != undefined ? <Form.Item label="优先级">
                 <Input type="number" value={config.value} min={30} max={100} onChange={e => handleChange("value", e.target.value)} />
-            </Form.Item>
+            </Form.Item> : null }
         </Form>
     </div>
 }

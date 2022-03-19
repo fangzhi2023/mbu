@@ -17,11 +17,11 @@ function EventBus() {
     };
    
    
-    this.publish = (eventType, arg) => {
+    this.publish = (eventType, ...arg) => {
       if (!subscriptions[eventType]) return;
 
       Object.getOwnPropertySymbols(subscriptions[eventType])
-        .forEach(key => subscriptions[eventType][key](arg));
+        .forEach(key => subscriptions[eventType][key](...arg));
     };
   }
 

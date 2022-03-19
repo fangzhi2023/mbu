@@ -18,18 +18,20 @@
       align-items: center;
       margin-left: 8px;
       > div {
-        max-width: 320px;
-      }
-      h3 {
-        display: inline-block;
-        margin: 0 8px 0 0;
-        max-width: 40%;
-        min-width: 12em;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: noWrap;
-        font-weight: 500;
-        vertical-align: middle;
+        max-width: 300px;
+        display: inline-flex;
+        align-items: center;
+        h3 {
+          margin: 0 8px 0 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-weight: 500;
+          vertical-align: middle;
+        }
+        .icon {
+          width: 20px;
+        }
       }
     }
     .right {

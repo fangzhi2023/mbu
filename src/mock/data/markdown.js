@@ -1,5 +1,12 @@
 export default {
-    "content": 
+    1: {
+        id: 1,
+        authorId: 1,
+        title: "我的简历",
+        description: "",
+        suiteId: 1,
+        nodeId: "1647666986447",
+        content: 
 `
 > *Meet Better You!*   在这里，遇到更优秀的自己。
 # 系统简介
@@ -14,5 +21,18 @@ export default {
 \\n
 > *Meet Better You!*   在这里，让自己变得更优秀。
 `
+    },
+    100: {
+        id: 1,
+        authorId: 1,
+        title: "新建详情文章",
+        description: "",
+        suiteId: "",
+        nodeId: "",
+        content: 
+`
+> *新建详情文章*
+`
+    },
 
 }

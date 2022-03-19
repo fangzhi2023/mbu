@@ -2,27 +2,66 @@ import React, { useEffect,useState } from "react"
 import G6 from '@antv/g6'
 import eventBus from "../utils/event-bus"
 import { fittingString } from "../utils/string"
-import BaseEditor from "./Base";
+import BaseEditor from "./Base"
+import { debounce } from "lodash"
 
 function GraphMapEditor(props) {
 
-  const { id, status, data } = props
+  const { id, data, editing } = props
+
+  const d = {
+    nodes: [],
+    edges: [],
+    ... data
+  }
 
   const ref = React.useRef(null);
 
   const [renderFun, setRenderFun] = useState(null)
 
+  let [graph, setGraph] = useState(null)
   useEffect(() => {
     const fun = renderGraph(ref.current)
-    fun(data, status === "editing")
+    setGraph(fun(d, editing))
+    console.log("首次渲染")
     setRenderFun(() => fun)
   }, [])
     
   useEffect(() => {
-    renderFun && renderFun(data, status === "editing")
-  }, [id, status])
+    // 首次渲染不执行
+    if (renderFun) {
+      setGraph(renderFun(d, editing))
+      console.log("二次渲染")
+    }
+  }, [id, editing])
 
-  return <BaseEditor id={id} status={status}>
+  const hasChanged = () => {
+    return graph && graph.isChange
+  }
+
+  const getData = () => {
+    const data = graph.save()
+    return {
+      nodes: data.nodes.map(node => {
+        return {
+          id: node.id,
+          info: node.info,
+          config: node.config,
+          data: node.data,
+          x: node.x,
+          y: node.y
+        }
+      }),
+      edges: data.edges.map(edge => {
+        return {
+          source: edge.source,
+          target: edge.target
+        }
+      })
+    }
+  }
+
+  return <BaseEditor id={id} editing={editing} hasChanged={hasChanged} getData={getData}>
     <div ref={ref} style={{width:"100%",height:"100%"}}></div>
   </BaseEditor>
 }
@@ -56,15 +95,15 @@ function renderGraph(container){
           value: 100,
           color: "white",
           backgroundColor: "grey",
-          size: 30
+          size: 80
         },
         data: {}
       }
     }
     function initNodeParams() {
       const params  = {}
-      params.x = width / 2 + 200 * (Math.random() - 0.5);
-      params.y = height / 2 + 200 * (Math.random() - 0.5);
+      params.x = width / 2 + 300 * (Math.random());
+      params.y = height / 2 + 300 * (Math.random() - 0.5);
       return params
     }
     function translateNodeParams(node) {
@@ -169,14 +208,6 @@ function renderGraph(container){
                 code: "createNode"
               },
               {
-                label: "关联模块",
-                code: "linkTo"
-              },
-              {
-                label: "解除关联",
-                code: "deleteLink"
-              },
-              {
                 label: "删除",
                 code: "deleteNode"
               }
@@ -205,12 +236,6 @@ function renderGraph(container){
           case "createNode":
             handleCreateNode(id)
             break
-          case "linkTo": 
-            handleCreateEdgeFrom(id)
-            break
-          case "deleteLink":
-            handleDeleteEdgeFrom(id)
-            break
           case "deleteNode":
             handleDeleteNode(id)
             break
@@ -237,10 +262,11 @@ function renderGraph(container){
           const newParams = translateNodeParams({...params, info: { ...params.info, ...info }})
           nodeMap[id] = JSON.parse(JSON.stringify(newParams))
           graph.update(node, newParams)
+          graph.paint()
+          graph.isChange = true
         } else {
           console.error("找不到结点: " + id)
         }
-        graph.paint()
     })
     eventBus.subscribe("updateNodeConfig", ({id, config}) => {
       const node = graph.findById(id)
@@ -250,6 +276,7 @@ function renderGraph(container){
         nodeMap[id] = JSON.parse(JSON.stringify(newParams))
         graph.update(node, newParams)
         graph.layout()
+        graph.isChange = true
       } else {
         console.error("找不到结点: " + id)
       }
@@ -262,6 +289,7 @@ function renderGraph(container){
         nodeMap[id] = JSON.parse(JSON.stringify(params))
         graph.update(node, params)
         graph.paint()
+        graph.isChange = true
       } else {
         console.error("找不到结点: " + id)
       }
@@ -318,7 +346,6 @@ function renderGraph(container){
   
     let graph
     
-
     // 处理事件
     function handleCreateNode(id) {
       const initParams = initNodeParams()
@@ -326,6 +353,7 @@ function renderGraph(container){
       const configParams = translateNodeParams(c)
       nodeMap[c.id] = JSON.parse(JSON.stringify(configParams))
       graph.add("node", Object.assign(initParams, configParams))
+      graph.isChange = true
       
       // 如果id不为空，新增关联新模块的边
       if (id) {
@@ -347,50 +375,19 @@ function renderGraph(container){
     function handleDeleteNode(id) {
       const n = graph.findById(id)
       graph.removeItem(n)
+      graph.isChange = true
       nodeMap[id] = null
+      eventBus.publish("hideNodeDialog")
     }
 
-    let nodeClickCallback = null
-    function handleCreateEdgeFrom(id) {
-      const sourceNode = nodeMap[id]
-      if (sourceNode) {
-        nodeClickCallback = (function(sourceId) {
-            return targetId =>{
-              const edge = translateEdgeParams({ source: sourceId, target: targetId })
-              graph.add("edge", edge)
-            }
-        })(id)
-      }
-    }
-    function handleDeleteEdgeFrom(id) {      
-      const sourceNode = nodeMap[id]
-      if (sourceNode) {
-        nodeClickCallback = (function(sourceId) {
-            return targetId =>{
-              const edge = graph.find('edge', edge => {
-                const c = edge.get('model')
-                return (c.source === sourceId && c.target === targetId) 
-                    || (c.source === targetId && c.target === sourceId)
-              })
-              edge && graph.removeItem(edge)
-            }
-        })(id)
-      }
-    }
     function handleDeleteEdge(id) {
       const edge = graph.findById(id)
       graph.removeItem(edge)
+      graph.isChange = true
     }
     
     function handleNodeClick(item) {
       const id = item.get("model").id
-
-      if (nodeClickCallback) {
-        nodeClickCallback(id)
-        nodeClickCallback = null
-        return
-      } 
-
       graph.focusItem(item, true, {
         easing: 'easeCubic',
         duration: 500,
@@ -415,7 +412,6 @@ function renderGraph(container){
       container,
       width,
       height,
-      fitViewPadding: 20,
       plugins,
       layout: {
         type: 'force',
@@ -460,16 +456,20 @@ function renderGraph(container){
           'drag-canvas',
           'zoom-canvas',
           'activate-relations',
-          'click-select', 
+          'click-select',
+          {
+            type: 'create-edge',
+            key: 'control', // undefined by default, options: 'shift', 'control', 'ctrl', 'meta', 'alt'
+          },
         ],
       },
+      minZoom: 0.5,
     });
 
     const nodes = data.nodes.map(node => {
-      const initParams = initNodeParams()
       const configParams = translateNodeParams(node)
       nodeMap[node.id] = JSON.parse(JSON.stringify(configParams))
-      return Object.assign({}, initParams, configParams)
+      return configParams
     })
     const edges = data.edges.map(edge => {
       return translateEdgeParams(edge)
@@ -482,15 +482,28 @@ function renderGraph(container){
 
     graph.render();
 
+    if (nodes.length === 0) {
+      const id = 'node'+Date.now()+parseInt(Math.random() * 100) 
+      handleCreateNode(id)
+      graph.isChange = false
+    }
+    
+    // 键盘按键
+    let downKey = undefined
+    graph.on("keydown", e => {
+      downKey = e.key
+    })
+    graph.on("keyup", e => {
+      downKey = undefined
+    })
+
     // 事件
     graph.on("node:click", function(e) {
+      if (downKey === "Control") return
       const item = e.item;
-      // animately move the graph to focus on the item.
-      // the second parameter controlls whether move with animation, the third parameter is the animate configuration
       handleNodeClick(item)
     })
     graph.on("canvas:click", function(e) {
-      nodeClickCallback = null
       eventBus.publish("hideNodeDialog")
     })
     graph.on("edge:mouseenter", function(e) {
@@ -522,11 +535,25 @@ function renderGraph(container){
       e.item.get('model').fy = null;
     });
 
-    if (typeof window !== 'undefined')
-      window.onresize = () => {
+    // 创建边相关
+    graph.on('aftercreateedge', (e) => {
+      graph.isChange = true
+      const item = e.edge
+      graph.updateItem(item, {
+        type: "line-growth"
+      })
+    });
+    
+    if (typeof window !== 'undefined') {
+      function resize() {
         if (!graph || graph.get('destroyed')) return;
-        if (!container || !container.scrollWidth || !container.scrollHeight) return;
-        graph.changeSize(container.scrollWidth, container.scrollHeight);
-      };
+        if (!container || !container.width || !container.height) return;
+        graph.changeSize(container.width, container.height);
+      }
+      window.onresize = debounce(resize, 200)
+    }
+
+
+    return graph
   }
 }
