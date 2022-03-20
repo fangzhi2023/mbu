@@ -1,26 +1,21 @@
-import { mockToken, mockSetting } from "../mock/shared"
-import { mockAuthor } from "../mock/author"
+import request from "../utils/request"
 
-export async function login() {    
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockToken()),
-        1000)
-    })
+export async function login(data) {
+    return request.post("/shared/login", data)
 }
 
 export async function fetchSetting() {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockSetting()),
-        500)
+    return request.get("/shared/fetchSetting")
+}
+
+export async function fetchAuthorInfo(authroId) {
+    return request.get("/shared/fetchAuthorInfo", {
+        authroId
     })
 }
 
-export async function fetchAuthor(id) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(mockAuthor(id))
-        }, 1000)
+export async function fetchAuthorShare(authroId) {
+    return request.get("/shared/fetchAuthorShare", {
+        authroId
     })
 }

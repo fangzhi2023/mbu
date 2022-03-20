@@ -15,7 +15,7 @@ import { fetchArticlesInfoBySuiteId } from "../services/article"
 
 function BaseEditor(props) {
 
-    const { id, editing, hasChanged, getData } = props
+    const { id, editing, checkChanged, onSaveSuccess, getData } = props
     
     // 获取关联文章和模块
     let [articleMap, setArticleMap] = useState({})
@@ -46,7 +46,7 @@ function BaseEditor(props) {
 
     useEffect(() => {
         const checkChangedSub = eventBus.subscribe("checkChanged", (params, cb) => {
-           if(hasChanged()) {
+           if(checkChanged()) {
                 Modal.confirm({
                     title: '存在未保存内容',
                     icon: <ExclamationCircleOutlined />,
@@ -56,6 +56,7 @@ function BaseEditor(props) {
                     onOk: async () => {
                         try {
                             await updateSuiteData({ id, data: getData() })
+                            onSaveSuccess()
                             cb && cb()
                         } catch (err) {
                             message.error("保存异常")
@@ -77,15 +78,14 @@ function BaseEditor(props) {
            cb && cb()
         })
         const saveSub = eventBus.subscribe("save", async (params, cb) => {
-            if (hasChanged()) {
+            if (checkChanged()) {
                 try {
                     await updateSuiteData({ id, data: getData() })
+                    onSaveSuccess()
                     cb && cb()
                 } catch (err) {
                     message.error("保存异常")
                 }
-                cb && cb()
-                return
             } else {
                 cb && cb()
             }
@@ -94,7 +94,7 @@ function BaseEditor(props) {
             checkChangedSub.unsubscribe()
             saveSub.unsubscribe()
         }
-    }, [hasChanged, getData])
+    }, [checkChanged, getData])
 
     return <div className="base-editor">
       {props.children}
@@ -196,7 +196,7 @@ function EditNodeInfo(props) {
     let [articleModalShow, setArticleModalShow] = useState(false)
 
     const linkToArticle = articleId => {
-        navigate( `/article/${articleId}/edit`, { state: { uKey: Date.now() } })
+        navigate( `/article/${articleId}/edit`, { state: { layoutKey: Date.now() } })
     }
     const handleEditArticle = () => {
         eventBus.publish("checkChanged", null, () => {
@@ -210,7 +210,7 @@ function EditNodeInfo(props) {
 
     let [suiteModalShow, setSuiteModalShow] = useState(false)
     const linkToSuite = suiteId => {
-        navigate( `/suite/${suiteId}/edit`, { state: { uKey: Date.now() } })
+        navigate( `/suite/${suiteId}/edit`, { state: { layoutKey: Date.now() } })
     }
     const handleEditSuite = () => {  
         eventBus.publish("checkChanged", null, () => {

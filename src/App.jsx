@@ -1,52 +1,61 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import {  useNavigate, useLocation } from "react-router"
+import { Spin } from "antd"
 
-import Layout from './layouts/components/Layout';
+import { fetchAdmin } from "./services/admin"
+import { fetchSetting } from "./services/shared"
+import { setUserInfo, setSetting } from "./store"
 
-import BlankLayout from "./layouts/BlankLayout";
-import BaseLayout from "./layouts/BaseLayout";
 
-import Article from './views/article';
-import Suite from './views/suite';
-
-import Login from './views/shared/login';
-import Page401 from './views/shared/401';
-import Page505 from './views/shared/505';
-import Page404 from './views/shared/404';
+import Layout from './layouts/components/Layout'
+import AppRoute from "./AppRoute"
 
 function App() {
+
+  // 获取系统设置
+  const navigate = useNavigate()
+  useEffect(() => {
+      async function fetchSystemInfo() {
+          try {
+              const setting = await fetchSetting()
+              setSetting(setting)
+          } catch (err) {
+              console.error(err)
+              navigate("/shared/505")
+          }
+      }
+      fetchSystemInfo()
+  }, [])
+
+  const [loading, setLoading] = useState(true)
+  // 登录后需重新获取用户信息
+  const { state } = useLocation()
+  let [uKey, setUKey] = useState(null)
+  if (state && state.appKey !== uKey) {
+      setUKey(state.appKey)
+      setLoading(true)
+  }
+
+  // 获取系统设置和用户信息
+  useEffect(() => {
+    setLoading(true)
+    async function fetchAdminInfo() {
+        try {
+            const admin = await fetchAdmin()
+            setUserInfo(admin)
+            setLoading(false)
+        } catch (err) {
+            setLoading(false)
+        }
+    }
+    fetchAdminInfo()
+  }, [uKey])
+
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<BaseLayout />}>
-          <Route index element={<Suite />} />
-          <Route path="suite" element={<Suite />} />
-          <Route path="suite/:id" element={<Suite />} />
-          <Route path="suite/:id/edit" element={<Suite editing={true} />} />
-          <Route path="article" element={<Article />} />
-          <Route path="article/:id" element={<Article />} />
-          <Route path="article/:id/edit" element={<Article editing={true} />} />
-        </Route>
-        <Route path="/shared" element={<BlankLayout />}>
-          <Route index element={<Page404 />} />
-          <Route path="login" element={<Login />} />
-          <Route path="401" element={<Page401 />} />
-          <Route path="505" element={<Page505 />} />
-          <Route path="404" element={<Page404 />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/shared/404" replace={true} />} />
-      </Routes>
-    </Layout>
-  );
-}
-
-export function RequireAuth({ children }) {
-  const authed = true
-
-  return authed === true ? (
-    children
-  ) : (
-    <Navigate to="/shared/401" replace />
-  );
+          { loading ? <div className="loading"><Spin /></div> : <AppRoute /> }
+     </Layout>
+  )
 }
 
 export default App;

@@ -4,7 +4,7 @@ import "./BlankLayout.scss"
 
 import Footer from "./components/Footer"
 
-function BlankLayout(props) {
+function BlankLayout() {
     return (
         <div className="blankLayout">
             <main><Outlet /></main>
@@ -13,4 +13,4 @@ function BlankLayout(props) {
     )
 }
 
-export default BlankLayout;
+export default BlankLayout

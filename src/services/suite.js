@@ -1,51 +1,36 @@
-import { mockSuiteInfo, mockSuite, mockSuitesInfoByParentId } from "../mock/suite"
+import request from "../utils/request"
 
-export async function fetchSuiteInfo(id) {    
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockSuiteInfo(id)),
-        1000)
+export async function fetchSuiteInfo(suiteId) {   
+    return request.get("/suite/fetchSuiteInfo", {
+        params: { suiteId }
     })
 }
 
-export async function fetchSuite(id) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockSuite(id)),
-        1000)
+export async function fetchSuite(suiteId) {   
+    return request.get("/suite/fetchSuite", {
+        params: { suiteId }
     })
 }
 
-export async function createSuiteInfo() {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({ id: Date.now() + '' }),
-        1000)
-    })
+export async function createSuiteInfo(suite) { 
+    return request.post("/suite/createSuiteInfo", suite)
 }
 
-export async function updateSuiteInfo() {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({ id: Date.now() + '' }),
-        1000)
-    })
+export async function updateSuiteInfo(suite) { 
+    return request.put("/suite/updateSuiteInfo", suite)
 }
 
-export async function updateSuiteData(data) {
-    console.log(JSON.stringify(data.data))
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({ id: Date.now() + '' }),
-        1000)
-    })
+export async function updateSuiteData(suite) { 
+    return request.put("/suite/updateSuiteData", suite)
+}
+
+export async function deleteSuite(suite) { 
+    return request.delete("/suite/deleteSuite", suite)
 }
 
 export async function fetchSuitesInfoByParentId(parentId) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockSuitesInfoByParentId(parentId)),
-        1000)
+    return request.get("/suite/fetchSuitesInfoByParentId", {
+        params: { parentId }
     })
 }
 

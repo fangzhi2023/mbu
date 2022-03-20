@@ -31,8 +31,11 @@ function GraphMapEditor(props) {
     }
   }, [id, editing])
 
-  const hasChanged = () => {
+  const checkChanged = () => {
     return graph && graph.isChange
+  }
+  const onSaveSuccess = () => {
+    graph.isChange = false
   }
 
   const getData = () => {
@@ -54,7 +57,7 @@ function GraphMapEditor(props) {
     return transformData(data)
   }
 
-  return <BaseEditor id={id} editing={editing} hasChanged={hasChanged} getData={getData}>
+  return <BaseEditor id={id} editing={editing} checkChanged={checkChanged} onSaveSuccess={onSaveSuccess} getData={getData}>
     <div ref={ref} style={{width:"100%",height:"100%"}}></div>
   </BaseEditor>
 }

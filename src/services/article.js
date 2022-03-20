@@ -1,47 +1,35 @@
-import { mockArticleInfo, mockArticle, mockArticlesInfoBySuiteId } from "../mock/article"
+import request from "../utils/request"
 
-export async function fetchArticleInfo(id) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockArticleInfo(id)),
-        2000)
+export async function fetchArticleInfo(articleId) {   
+    return request.get("/article/fetchArticleInfo", {
+        params: { articleId }
     })
 }
 
-export async function fetchArticle(id) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockArticle(id)),
-        2000)
+export async function fetchArticle(articleId) {   
+    return request.get("/article/fetchArticle", {
+        params: { articleId }
     })
 }
-export async function createArticleInfo(data) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({id: Date.now() + '' }),
-        2000)
-    })
+
+export async function createArticleInfo(article) { 
+    return request.post("/article/createArticleInfo", article)
 }
-export async function updateArticleInfo(data) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({id: Date.now() + '' }),
-        2000)
-    })
+
+export async function updateArticleInfo(article) { 
+    return request.put("/article/updateArticleInfo", article)
 }
-export async function updateArticleContent(data) {
-    console.log(JSON.stringify(data.data))
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve({id: Date.now() + '' }),
-        2000)
-    })
+
+export async function updateArticleContent(article) { 
+    return request.put("/article/updateArticleContent", article)
+}
+
+export async function deleteArticle(article) { 
+    return request.delete("/article/deleteArticle", article)
 }
 
 export async function fetchArticlesInfoBySuiteId(suiteId) {
-    return new Promise(resolve => {
-        setTimeout(
-            () => resolve(mockArticlesInfoBySuiteId(suiteId)),
-        2000)
+    return request.get("/article/fetchArticlesInfoBySuiteId", {
+        params: { suiteId }
     })
 }

@@ -1,14 +1,10 @@
-import { mockAuthor } from "../mock/author"
 import { isLogin } from "../store"
+import request from "../utils/request"
 
 export async function fetchAdmin() {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            if (isLogin()) {
-                resolve(mockAuthor(1))
-            } else {
-                reject("暂未登录")
-            }
-        }, 2000)
-    })
+    if (isLogin()) {
+        return request("/admin/fetchAdmin")
+    } else {
+        return Promise.reject("暂未登录")
+    }
 }

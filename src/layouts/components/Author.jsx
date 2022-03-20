@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react"
 import { Avatar, Spin } from "antd"
-import { fetchAuthor } from "../../services/shared"
+import { fetchAuthorInfo, fetchAuthorShare } from "../../services/shared"
 import "./Author.scss"
 import { NavLink } from "react-router-dom"
 import eventBus from "../../utils/event-bus"
@@ -25,21 +25,31 @@ function Author(props) {
     const [loading, setLoading] = useState(true)
     const [author, setAuthor] = useState({})
     useEffect(() => {
-        async function fetchAuthorInfo() {
-            const data = await fetchAuthor(authorId)
-            setAuthor(data)
-            setLoading(false)
+        async function fetchAuthor() {
+            setLoading(true)
+            try {
+                const data = await fetchAuthorInfo(authorId)
+                setAuthor(data)
+                setLoading(false)
+            } catch(error) {
+                setLoading(false)
+            }
         }
-        fetchAuthorInfo()
+        fetchAuthor()
     }, [authorId])
 
     const [listLoading, setListLoading] = useState(true)
     const [list, setList] = useState([])
     useEffect(() => {
         async function fetchAuthorList() {
-            const data = await fetchAuthor(authorId)
-            setList([1,2,3,4,5,6])
-            setListLoading(false)
+            setListLoading(true)
+            try {
+                const list = await fetchAuthorShare(authorId)
+                setList(list)
+                setListLoading(false)
+            } catch(error) {
+                setListLoading(false)
+            }
         }
         fetchAuthorList()
     }, [authorId])
@@ -60,7 +70,7 @@ function Author(props) {
             { loading 
                 ? <Spin /> 
                 : <Fragment>
-                    <h3>{ author.name }</h3>
+                    <h3>{ author.name || author.phone }</h3>
                     <small> 2022/03/22 </small>
                 </Fragment>}
         </div>

@@ -1,13 +1,13 @@
 
-import { Spin } from 'antd';
+import { Spin, message } from 'antd';
 import { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router';
+import { useLocation, useParams, useNavigate } from 'react-router';
 import { dynamicLoad } from "../../editors"
 
 import "./index.scss"
 
 import { fetchSuite } from '../../services/suite';
-import { getDefaultId } from '../../layouts/BaseLayout';
+import { getDefaultId } from '../../layouts/HeaderLayout';
 
 function Suite(props) { 
     
@@ -18,8 +18,8 @@ function Suite(props) {
 
     const { state } = useLocation()
     let [uKey, setUKey] = useState(null)
-    if (state && state.uKey != uKey) {
-        setUKey(state.uKey)
+    if (state && state.layoutKey != uKey) {
+        setUKey(state.layoutKey)
     }
 
     let [loading, setLoading] = useState(true)
@@ -27,17 +27,32 @@ function Suite(props) {
         component: null,
         data: null
     })
+    
+    const navigate = useNavigate()
     useEffect(() => {
         setLoading(true)
         async function fetchSuiteData() {
-            const data = await fetchSuite(id)
-            const component = await dynamicLoad(data.type)
-            setEditor({
-                ... data,
-                name: data.type,
-                component: component.default
-            })
-            setLoading(false)
+            try {
+                const data = await fetchSuite(id)
+                const component = await dynamicLoad(data.type)
+                setEditor({
+                    ... data,
+                    name: data.type,
+                    component: component.default
+                })
+                setLoading(false) 
+            } catch (err) {
+                switch(err.code) {
+                    case 401:
+                        navigate("/shared/401")
+                        return
+                    case 404:
+                        navigate("/shared/404")
+                        return
+                    default:
+                        message.warn(err.message)
+                }
+            }
         }
         fetchSuiteData()
     }, [id, uKey])

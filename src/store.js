@@ -31,13 +31,16 @@ export function getUserInfo() {
 }
 
 const tokenKey = "token"
+export function getToken() {
+    return getCookie(tokenKey)
+}
 export function isLogin() {
     return !!getCookie(tokenKey)
 }
-export function login(token) {
-    setCookie(tokenKey, token)
+export function setToken(token) {
+    setCookie(tokenKey, "mbu " + token)
 }
-export function logout() {
+export function delToken() {
     delCookie(tokenKey)
     window.localStorage.setItem(userInfoKey, null)
 }

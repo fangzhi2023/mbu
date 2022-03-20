@@ -6,8 +6,8 @@ import Markdown from "./components/Markdown"
 import eventBus from "../../utils/event-bus"
 
 import { fetchArticle, updateArticleContent } from "../../services/article"
-import { useLocation, useParams } from "react-router"
-import { getDefaultId } from "../../layouts/BaseLayout"
+import { useLocation, useParams, useNavigate } from "react-router"
+import { getDefaultId } from "../../layouts/HeaderLayout"
 import { ExclamationCircleOutlined } from "@ant-design/icons"
 
 const style = {
@@ -27,8 +27,8 @@ function Article(props) {
     const { state } = useLocation()
 
     let [uKey, setUKey] = useState(null)
-    if (state && state.uKey !== uKey) {
-        setUKey(state.uKey)
+    if (state && state.layoutKey !== uKey) {
+        setUKey(state.layoutKey)
     }
 
     let [loading, setLoading] = useState(true)
@@ -36,13 +36,27 @@ function Article(props) {
     let [isChanged, setIsChanged] = useState(null)
     let [newContent, setNewContent] = useState("")
 
+    const navigate = useNavigate()
     useEffect(() => {
         setIsChanged(null)
         setLoading(true)
         async function fetchArticleContent() {
-            const data = await fetchArticle(id)
-            setContent(data.content)
-            setLoading(false)
+            try {
+                const data = await fetchArticle(id)
+                setContent(data.content)
+                setLoading(false)
+            } catch (err) {
+                switch(err.code) {
+                    case 401:
+                        navigate("/shared/401")
+                        return
+                    case 404:
+                        navigate("/shared/404")
+                        return
+                    default:
+                        message.warn(err.message)
+                }
+            }
         }
         fetchArticleContent()
     }, [id, uKey, editing])
@@ -91,7 +105,7 @@ function Article(props) {
                     setIsChanged(false)
                     cb && cb()
                 } catch (err) {
-                    console.err(err)
+                    console.error(err)
                 }
             } else {
                 cb && cb()
